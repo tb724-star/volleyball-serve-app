@@ -4,9 +4,9 @@ from datetime import datetime
 
 st.set_page_config(layout="wide")
 
-# ------------------
+# ==================
 # 初期設定
-# ------------------
+# ==================
 if "log" not in st.session_state:
     st.session_state.log = []
 
@@ -34,9 +34,21 @@ if "my_servers" not in st.session_state:
 if "opp_servers" not in st.session_state:
     st.session_state.opp_servers = []
 
-# ------------------
+# ==================
+# 関数
+# ==================
+def get_current_server():
+    if st.session_state.serve_team == "自チーム":
+        if len(st.session_state.my_servers) == 6:
+            return st.session_state.my_servers[st.session_state.rotation % 6]
+    else:
+        if len(st.session_state.opp_servers) == 6:
+            return st.session_state.opp_servers[st.session_state.rotation % 6]
+    return None
+
+# ==================
 # タイトル・試合情報
-# ------------------
+# ==================
 st.title("🏐 サーブ効果率記録アプリ")
 
 col1, col2, col3 = st.columns(3)
@@ -45,24 +57,22 @@ with col1:
 with col2:
     match_name = st.text_input("試合名")
 with col3:
-    max_score = st.number_input("セット得点（15 / 25 など）", value=25)
+    max_score = st.number_input("セット得点（15 / 25など）", value=25)
 
 st.divider()
 
-# ------------------
+# ==================
 # サーブ順入力
-# ------------------
+# ==================
 st.subheader("🔁 サーブ順入力（左→右）")
 
 colA, colB = st.columns(2)
-
 with colA:
     my_servers = st.multiselect(
         "自チーム サーブ順（6人）",
         options=list(range(1, 31)),
         default=st.session_state.my_servers
     )
-
 with colB:
     opp_servers = st.multiselect(
         "相手チーム サーブ順（6人）",
@@ -70,27 +80,17 @@ with colB:
         default=st.session_state.opp_servers
     )
 
-# session_state へ反映（安全）
 if len(my_servers) <= 6:
     st.session_state.my_servers = my_servers
 
 if len(opp_servers) <= 6:
     st.session_state.opp_servers = opp_servers
 
-def get_current_server():
-    if st.session_state.serve_team == "自チーム" and len(st.session_state.my_servers) == 6:
-        return st.session_state.my_servers[st.session_state.rotation % 6]
-    if st.session_state.serve_team == "相手" and len(st.session_state.opp_servers) == 6:
-        return st.session_state.opp_servers[st.session_state.rotation % 6]
-    return None
-
-current_server = get_current_server()
-
 st.divider()
 
-# ------------------
-# 現在状況表示
-# ------------------
+# ==================
+# 現在状況表示（←ここが超重要）
+# ==================
 st.subheader("📊 現在の状況")
 
 c1, c2, c3 = st.columns(3)
@@ -99,16 +99,17 @@ with c1:
 with c2:
     st.metric("相手得点", st.session_state.opp_score)
 with c3:
-    if current_server is not None:
-        st.metric("現在のサーバー", f"{st.session_state.serve_team}：#{current_server}")
+    server_now = get_current_server()
+    if server_now is not None:
+        st.metric("現在のサーバー", f"{st.session_state.serve_team}：#{server_now}")
     else:
         st.warning("サーブ順を6人入力してください")
 
 st.divider()
 
-# ------------------
+# ==================
 # 結果入力
-# ------------------
+# ==================
 st.subheader("📝 サーブ結果")
 
 result = st.radio(
@@ -123,10 +124,12 @@ point = st.radio(
     horizontal=True
 )
 
-# ------------------
-# 記録ボタン
-# ------------------
+# ==================
+# 記録処理
+# ==================
 if st.button("▶ 記録"):
+    current_server = get_current_server()
+
     if current_server is None:
         st.warning("サーブ順が未完成です")
     else:
@@ -150,6 +153,7 @@ if st.button("▶ 記録"):
             "opp_score": st.session_state.opp_score
         })
 
+        # 得点・サーブ権更新
         if point == "自チーム得点":
             st.session_state.team_score += 1
             st.session_state.serve_team = "自チーム"
@@ -160,9 +164,9 @@ if st.button("▶ 記録"):
         st.session_state.rotation += 1
         st.session_state.rally_no += 1
 
-# ------------------
-# セット終了判定
-# ------------------
+# ==================
+# セット終了
+# ==================
 if st.session_state.team_score >= max_score or st.session_state.opp_score >= max_score:
     st.success("🏁 セット終了")
     if st.button("次のセットへ"):
@@ -175,17 +179,17 @@ if st.session_state.team_score >= max_score or st.session_state.opp_score >= max
 
 st.divider()
 
-# ------------------
+# ==================
 # 記録表示
-# ------------------
+# ==================
 st.subheader("📋 記録一覧")
 
 df = pd.DataFrame(st.session_state.log)
 st.dataframe(df, use_container_width=True)
 
-# ------------------
+# ==================
 # CSVエクスポート
-# ------------------
+# ==================
 if not df.empty:
     csv = df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(

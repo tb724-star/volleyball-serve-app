@@ -104,8 +104,9 @@ if st.session_state.my_servers and st.session_state.opp_servers:
 st.subheader("サーブ結果入力")
 
 st.session_state.pending_result = st.radio(
+st.session_state.pending_result = st.radio(
     "効果",
-    ["サービスエース", "Cパス", "Bパス", "Aパス", "サーブミス"]
+    ["サービスエース", "Aパス", "Bパス", "Cパス", "サーブミス"]
 )
 
 st.session_state.pending_point = st.radio(

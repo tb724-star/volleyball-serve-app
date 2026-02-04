@@ -162,6 +162,7 @@ if st.button("記録"):
 
     st.session_state.rotation += 1
     st.session_state.rally_no += 1
+
 st.rerun()
 
 # ------------------

@@ -107,7 +107,8 @@ st.session_state.pending_result = st.radio(
 st.session_state.pending_result = st.radio(
     "効果",
     ["サービスエース", "Aパス", "Bパス", "Cパス", "サーブミス"]
-)
+))
+
 
 st.session_state.pending_point = st.radio(
     "得点",

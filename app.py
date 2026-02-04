@@ -143,16 +143,23 @@ if st.session_state.confirming and current_server is not None:
                 else:
                     st.session_state.opp_rotate_idx = (st.session_state.opp_rotate_idx + 1) % 6
 
-            st.session_state.log.append({
-                "date": match_date,
-                "match": match_name,
-                "set": st.session_state.set_no,
-                "rally": st.session_state.rally_no,
-                "serving_team": prev_serving,
-                "server": current_server,
-                "result": st.session_state.pending_result,
-                "point": st.session_state.pending_point,
-            })
+           st.session_state.log.append({
+    "date": match_date,
+    "match": match_name,
+    "set": st.session_state.set_no,
+    "rally": st.session_state.rally_no,
+    "serving_team": prev_serving,
+    "server": current_server,
+    "result": st.session_state.pending_result,
+    "point": st.session_state.pending_point,
+
+    # --- Undo用 ---
+    "undo_team_score": st.session_state.team_score,
+    "undo_opp_score": st.session_state.opp_score,
+    "undo_serving_team": prev_serving,
+    "undo_my_rotate_idx": st.session_state.my_rotate_idx,
+    "undo_opp_rotate_idx": st.session_state.opp_rotate_idx,
+})
 
             st.session_state.rally_no += 1
             st.session_state.confirming = False
@@ -160,6 +167,24 @@ if st.session_state.confirming and current_server is not None:
     with col2:
         if st.button("✏️ 修正"):
             st.session_state.confirming = False
+
+st.subheader("↩️ 操作")
+
+if st.button("Undo（1つ戻す）"):
+    if len(st.session_state.log) > 0:
+        last = st.session_state.log.pop()
+
+        st.session_state.team_score = last["undo_team_score"]
+        st.session_state.opp_score = last["undo_opp_score"]
+        st.session_state.serving_team = last["undo_serving_team"]
+        st.session_state.my_rotate_idx = last["undo_my_rotate_idx"]
+        st.session_state.opp_rotate_idx = last["undo_opp_rotate_idx"]
+
+        st.session_state.rally_no -= 1
+
+        st.success("1つ前の記録を取り消しました")
+    else:
+        st.info("取り消す記録がありません")
 
 # ==================
 # 記録一覧

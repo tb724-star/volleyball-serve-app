@@ -79,17 +79,24 @@ if st.button("記録"):
     else:
         st.session_state.opp_score += 1
 
-    st.session_state.log.append({
-        "date": match_date,
-        "match": match_name,
-        "set": st.session_state.set_no,
-        "rally": st.session_state.rally_no,
-        "team_score": st.session_state.team_score,
-        "opp_score": st.session_state.opp_score,
-        "rotation": st.session_state.rotation,
-        "server": server,
-        "result": result
-    })
+ace = 1 if result == "サービスエース" else 0
+effect = 1 if result == "Cパス" else 0
+miss = 1 if result == "サーブミス" else 0
+
+st.session_state.log.append({
+    "date": match_date,
+    "match": match_name,
+    "set": st.session_state.set_no,
+    "rally": st.session_state.rally_no,
+    "team_score": st.session_state.team_score,
+    "opp_score": st.session_state.opp_score,
+    "rotation": st.session_state.rotation,
+    "server": server,
+    "result": result,
+    "ace": ace,
+    "effect": effect,
+    "miss": miss
+})
 
     st.session_state.rally_no += 1
 
@@ -122,6 +129,32 @@ st.subheader("記録データ")
 
 df = pd.DataFrame(st.session_state.log)
 st.dataframe(df, use_container_width=True)
+
+# ------------------
+# サーブ効果率（関大式）
+# ------------------
+st.subheader("📊 サーブ効果率（関大式）")
+
+if not df.empty:
+    summary = (
+        df.groupby(["server", "set"])
+        .agg(
+            打数=("result", "count"),
+            ACE=("ace", "sum"),
+            効果=("effect", "sum"),
+            失点=("miss", "sum")
+        )
+        .reset_index()
+    )
+
+    summary["サーブ効果率（%）"] = (
+        (summary["ACE"] * 100
+         + summary["効果"] * 25
+         - summary["失点"] * 25)
+        / summary["打数"]
+    ).round(1)
+
+    st.dataframe(summary, use_container_width=True)
 
 # ------------------
 # CSVエクスポート

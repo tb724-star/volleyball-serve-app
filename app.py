@@ -152,7 +152,6 @@ if st.button("記録"):
 
     st.session_state.rally_no += 1
 
-    st.experimental_rerun()
 
 # ==================
 # データ表示

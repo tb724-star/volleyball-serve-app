@@ -95,21 +95,62 @@ if st.session_state.my_servers and st.session_state.opp_servers:
     )
 
 # ==================
-# サーブ結果入力
+# サーブ結果入力 & 記録（form）
 # ==================
 st.subheader("サーブ結果")
 
-result = st.radio(
-    "効果",
-    ["サービスエース", "Cパス", "Bパス", "Aパス", "サーブミス"],
-    horizontal=True
-)
+with st.form("record_form"):
 
-point = st.radio(
-    "得点",
-    ["自チーム得点", "相手得点"],
-    horizontal=True
-)
+    result = st.radio(
+        "効果",
+        ["サービスエース", "Cパス", "Bパス", "Aパス", "サーブミス"],
+        horizontal=True
+    )
+
+    point = st.radio(
+        "得点",
+        ["自チーム得点", "相手得点"],
+        horizontal=True
+    )
+
+    submitted = st.form_submit_button("記録")
+
+    if submitted:
+
+        prev_serving = st.session_state.serving_team
+
+        # 得点処理
+        if point == "自チーム得点":
+            st.session_state.team_score += 1
+            scorer = "my"
+        else:
+            st.session_state.opp_score += 1
+            scorer = "opp"
+
+        # サーブ権・ローテ処理
+        if scorer != prev_serving:
+            st.session_state.serving_team = scorer
+
+            if scorer == "my":
+                st.session_state.my_rotate_idx = (st.session_state.my_rotate_idx + 1) % 6
+            else:
+                st.session_state.opp_rotate_idx = (st.session_state.opp_rotate_idx + 1) % 6
+
+        # ログ保存
+        st.session_state.log.append({
+            "date": match_date,
+            "match": match_name,
+            "set": st.session_state.set_no,
+            "rally": st.session_state.rally_no,
+            "serving_team": prev_serving,
+            "server": current_server,
+            "result": result,
+            "point": point,
+            "team_score": st.session_state.team_score,
+            "opp_score": st.session_state.opp_score,
+        })
+
+        st.session_state.rally_no += 1
 
 # ==================
 # 記録処理（核心）

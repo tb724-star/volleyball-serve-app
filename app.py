@@ -96,14 +96,17 @@ with col3:
         current_server = st.session_state.my_servers[
             st.session_state.rotation % 6
         ]
+        server_label = f"自チーム {current_server}番"
     elif st.session_state.opp_servers:
         current_server = st.session_state.opp_servers[
             st.session_state.rotation % 6
         ]
+        server_label = f"相手チーム {current_server}番"
     else:
         current_server = None
+        server_label = "未設定"
 
-    st.metric("現在のサーバー", current_server)
+    st.metric("現在のサーバー", server_label)
 
 # ------------------
 # 結果入力

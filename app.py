@@ -143,7 +143,7 @@ if st.session_state.confirming and current_server is not None:
                 else:
                     st.session_state.opp_rotate_idx = (st.session_state.opp_rotate_idx + 1) % 6
 
-           st.session_state.log.append({
+    st.session_state.log.append({
     "date": match_date,
     "match": match_name,
     "set": st.session_state.set_no,
@@ -152,6 +152,7 @@ if st.session_state.confirming and current_server is not None:
     "server": current_server,
     "result": st.session_state.pending_result,
     "point": st.session_state.pending_point,
+         }）
 
     # --- Undo用 ---
     "undo_team_score": st.session_state.team_score,

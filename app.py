@@ -69,46 +69,7 @@ with col3:
 
 st.divider()
 
-# ==================
-# サーブ順入力
-# ==================
-st.subheader("🔁 サーブ順入力（6人選んで確定）")
 
-colA, colB = st.columns(2)
-
-with colA:
-    st.session_state.tmp_my_servers = st.multiselect(
-        "自チーム サーブ順（左→右）",
-        options=list(range(1, 31)),
-        default=st.session_state.tmp_my_servers
-    )
-
-with colB:
-    st.session_state.tmp_opp_servers = st.multiselect(
-        "相手チーム サーブ順（左→右）",
-        options=list(range(1, 31)),
-        default=st.session_state.tmp_opp_servers
-    )
-
-colC, colD = st.columns(2)
-
-with colC:
-    if st.button("✅ 自チーム サーブ順確定"):
-        if len(st.session_state.tmp_my_servers) == 6:
-            st.session_state.my_servers = st.session_state.tmp_my_servers.copy()
-            st.success("自チームのサーブ順を確定しました")
-        else:
-            st.error("6人選択してください")
-
-with colD:
-    if st.button("✅ 相手チーム サーブ順確定"):
-        if len(st.session_state.tmp_opp_servers) == 6:
-            st.session_state.opp_servers = st.session_state.tmp_opp_servers.copy()
-            st.success("相手チームのサーブ順を確定しました")
-        else:
-            st.error("6人選択してください")
-
-st.divider()
 
 # ==================
 # 現在状況表示
@@ -128,7 +89,40 @@ with c3:
         st.warning("サーブ順が未確定です")
 
 st.divider()
+# ==================
+# サーブ順入力（formで固定）
+# ==================
+st.subheader("🔁 サーブ順入力（6人選んで確定）")
 
+with st.form("serve_order_form"):
+
+    colA, colB = st.columns(2)
+
+    with colA:
+        tmp_my_servers = st.multiselect(
+            "自チーム サーブ順（左→右）",
+            options=list(range(1, 31)),
+            default=st.session_state.tmp_my_servers
+        )
+
+    with colB:
+        tmp_opp_servers = st.multiselect(
+            "相手チーム サーブ順（左→右）",
+            options=list(range(1, 31)),
+            default=st.session_state.tmp_opp_servers
+        )
+
+    submit = st.form_submit_button("✅ サーブ順を確定")
+
+    if submit:
+        if len(tmp_my_servers) != 6 or len(tmp_opp_servers) != 6:
+            st.error("自チーム・相手チームともに6人選択してください")
+        else:
+            st.session_state.my_servers = tmp_my_servers.copy()
+            st.session_state.opp_servers = tmp_opp_servers.copy()
+            st.session_state.tmp_my_servers = tmp_my_servers.copy()
+            st.session_state.tmp_opp_servers = tmp_opp_servers.copy()
+            st.success("サーブ順を確定しました")
 # ==================
 # 結果入力
 # ==================

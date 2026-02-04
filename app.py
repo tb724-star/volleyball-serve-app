@@ -172,9 +172,7 @@ if st.button("Undo（1つ戻す）"):
     if len(st.session_state.log) > 0:
         st.session_state.log.pop()
         st.session_state.rally_no -= 1
-
-st.divider()
-
+        st.divider()
 # ------------------
 # データ表示
 # ------------------

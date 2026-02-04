@@ -47,7 +47,7 @@ with col3:
 st.divider()
 
 # ==================
-# サーブ順入力（form）
+# サーブ順入力
 # ==================
 st.subheader("🔁 サーブ順入力")
 
@@ -80,7 +80,7 @@ with st.form("serve_order_form"):
             st.success("サーブ順を確定しました")
 
 # ==================
-# 現在の得点・サーバー表示（固定）
+# 現在の得点・サーバー
 # ==================
 st.divider()
 
@@ -102,11 +102,11 @@ if st.session_state.my_servers and st.session_state.opp_servers:
 # サーブ結果入力
 # ==================
 st.subheader("サーブ結果入力")
+
 st.session_state.pending_result = st.radio(
     "効果",
     ["サービスエース", "Aパス", "Bパス", "Cパス", "サーブミス"]
 )
-
 
 st.session_state.pending_point = st.radio(
     "得点",
@@ -117,15 +117,11 @@ if st.button("🔍 確認"):
     st.session_state.confirming = True
 
 # ==================
-# 確認 → 確定
+# 確定処理
 # ==================
-if st.session_state.confirming:
+if st.session_state.confirming and current_server is not None:
 
     st.warning("この内容で記録しますか？")
-
-    st.write(f"サーバー：{current_server}")
-    st.write(f"効果：{st.session_state.pending_result}")
-    st.write(f"得点：{st.session_state.pending_point}")
 
     col1, col2 = st.columns(2)
 
@@ -133,7 +129,6 @@ if st.session_state.confirming:
         if st.button("✅ 確定"):
             prev_serving = st.session_state.serving_team
 
-            # 得点処理
             if st.session_state.pending_point == "自チーム得点":
                 st.session_state.team_score += 1
                 scorer = "my"
@@ -141,7 +136,6 @@ if st.session_state.confirming:
                 st.session_state.opp_score += 1
                 scorer = "opp"
 
-            # サーブ権・ローテ処理
             if scorer != prev_serving:
                 st.session_state.serving_team = scorer
                 if scorer == "my":
@@ -149,7 +143,6 @@ if st.session_state.confirming:
                 else:
                     st.session_state.opp_rotate_idx = (st.session_state.opp_rotate_idx + 1) % 6
 
-            # ログ保存
             st.session_state.log.append({
                 "date": match_date,
                 "match": match_name,
@@ -159,15 +152,13 @@ if st.session_state.confirming:
                 "server": current_server,
                 "result": st.session_state.pending_result,
                 "point": st.session_state.pending_point,
-                "team_score": st.session_state.team_score,
-                "opp_score": st.session_state.opp_score,
             })
 
             st.session_state.rally_no += 1
             st.session_state.confirming = False
 
     with col2:
-        if st.button("✏️ 修正する"):
+        if st.button("✏️ 修正"):
             st.session_state.confirming = False
 
 # ==================
@@ -180,13 +171,52 @@ df = pd.DataFrame(st.session_state.log)
 st.dataframe(df, use_container_width=True)
 
 # ==================
-# CSV出力
+# 集計（Ver.1.2①）
 # ==================
 if not df.empty:
-    csv = df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        "CSVダウンロード",
-        csv,
-        file_name="serve_log.csv",
-        mime="text/csv"
+    st.divider()
+    st.subheader("📊 セット別 個人サーブ評価")
+
+    df["ace"] = (df["result"] == "サービスエース").astype(int)
+    df["effect"] = (df["result"] == "Cパス").astype(int)
+    df["miss"] = (df["result"] == "サーブミス").astype(int)
+
+    serve_summary = (
+        df.groupby(["server", "set"])
+        .agg(
+            打数=("result", "count"),
+            ACE=("ace", "sum"),
+            効果=("effect", "sum"),
+            失点=("miss", "sum"),
+        )
+        .reset_index()
     )
+
+    serve_summary["サーブ効果率（%）"] = (
+        (serve_summary["ACE"] * 100
+         + serve_summary["効果"] * 25
+         - serve_summary["失点"] * 100)
+        / serve_summary["打数"]
+    ).round(1)
+
+    st.dataframe(serve_summary, use_container_width=True)
+
+    st.subheader("📊 サーブレシーブ成功率")
+
+    recv_df = df[df["result"].isin(["Aパス", "Bパス", "Cパス"])].copy()
+    recv_df["success"] = recv_df["result"].isin(["Aパス", "Bパス"]).astype(int)
+
+    recv_summary = (
+        recv_df.groupby(["set"])
+        .agg(
+            試行=("result", "count"),
+            成功=("success", "sum")
+        )
+        .reset_index()
+    )
+
+    recv_summary["サーブレシーブ成功率（%）"] = (
+        recv_summary["成功"] / recv_summary["試行"] * 100
+    ).round(1)
+
+    st.dataframe(recv_summary, use_container_width=True)

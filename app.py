@@ -4,36 +4,42 @@ from datetime import datetime
 
 st.set_page_config(layout="wide")
 
-# ==================
+# =====================
 # 初期化
-# ==================
-def init_state():
-    defaults = {
-        "log": [],
-        "set_no": 1,
-        "rally_no": 1,
-        "team_score": 0,
-        "opp_score": 0,
-        "serving_team": "my",  # my / opp
-        "my_rotate_idx": 0,
-        "opp_rotate_idx": 0,
-        "my_servers": [],
-        "opp_servers": [],
-        "tmp_my_servers": [],
-        "tmp_opp_servers": [],
-        "confirming": False,
-        "pending_result": None,
-        "pending_point": None,
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
+# =====================
+if "log" not in st.session_state:
+    st.session_state.log = []
 
-init_state()
+if "set_no" not in st.session_state:
+    st.session_state.set_no = 1
 
-# ==================
+if "rally_no" not in st.session_state:
+    st.session_state.rally_no = 1
+
+if "team_score" not in st.session_state:
+    st.session_state.team_score = 0
+
+if "opp_score" not in st.session_state:
+    st.session_state.opp_score = 0
+
+if "rotation" not in st.session_state:
+    st.session_state.rotation = 1
+
+if "need_rotation" not in st.session_state:
+    st.session_state.need_rotation = False
+
+if "serve_order" not in st.session_state:
+    st.session_state.serve_order = []
+
+if "pending_result" not in st.session_state:
+    st.session_state.pending_result = None
+
+if "pending_point" not in st.session_state:
+    st.session_state.pending_point = None
+
+# =====================
 # タイトル・試合情報
-# ==================
+# =====================
 st.title("🏐 サーブ効果率記録アプリ")
 
 col1, col2, col3 = st.columns(3)
@@ -42,146 +48,164 @@ with col1:
 with col2:
     match_name = st.text_input("試合名")
 with col3:
-    max_score = st.number_input("セット得点（15 / 25など）", value=25)
+    max_score = st.number_input("セット得点（15 / 25 など）", value=25)
 
 st.divider()
 
-# ==================
-# サーブ順入力（form）
-# ==================
-st.subheader("🔁 サーブ順入力")
+# =====================
+# サーブ順入力
+# =====================
+st.subheader("サーブ順（6人）")
 
-with st.form("serve_order_form"):
-    colA, colB = st.columns(2)
+serve_order = st.multiselect(
+    "サーブ順を1番目→6番目の順で選択",
+    options=[i for i in range(1, 31)],
+    max_selections=6
+)
 
-    with colA:
-        tmp_my = st.multiselect(
-            "自チーム（6人）",
-            options=list(range(1, 31)),
-            default=st.session_state.tmp_my_servers
-        )
-    with colB:
-        tmp_opp = st.multiselect(
-            "相手チーム（6人）",
-            options=list(range(1, 31)),
-            default=st.session_state.tmp_opp_servers
-        )
+if len(serve_order) == 6:
+    st.session_state.serve_order = serve_order
+    st.success("サーブ順が確定しました")
 
-    submitted = st.form_submit_button("サーブ順を確定")
+if len(st.session_state.serve_order) == 6:
+    current_server = st.session_state.serve_order[
+        (st.session_state.rotation - 1) % 6
+    ]
+else:
+    current_server = None
 
-    if submitted:
-        if len(tmp_my) != 6 or len(tmp_opp) != 6:
-            st.error("両チーム6人ずつ選んでください")
-        else:
-            st.session_state.my_servers = tmp_my
-            st.session_state.opp_servers = tmp_opp
-            st.session_state.tmp_my_servers = tmp_my
-            st.session_state.tmp_opp_servers = tmp_opp
-            st.success("サーブ順を確定しました")
+# =====================
+# 現在の状況表示
+# =====================
+st.subheader("現在の状況")
 
-# ==================
-# 現在の得点・サーバー表示（固定）
-# ==================
-st.divider()
-
-current_server = None
-if st.session_state.my_servers and st.session_state.opp_servers:
-    if st.session_state.serving_team == "my":
-        current_server = st.session_state.my_servers[st.session_state.my_rotate_idx]
-        st.info(f"🏐 自チーム サーバー：#{current_server}")
-    else:
-        current_server = st.session_state.opp_servers[st.session_state.opp_rotate_idx]
-        st.warning(f"🏐 相手チーム サーバー：#{current_server}")
-
-    st.write(
-        f"🔢 得点　自チーム {st.session_state.team_score} − "
-        f"{st.session_state.opp_score} 相手"
+colA, colB, colC = st.columns(3)
+with colA:
+    st.metric("自チーム得点", st.session_state.team_score)
+with colB:
+    st.metric("相手得点", st.session_state.opp_score)
+with colC:
+    st.metric(
+        "現在のサーバー",
+        f"自チーム #{current_server}" if current_server else "-"
     )
 
-# ==================
+st.divider()
+
+# =====================
 # サーブ結果入力
-# ==================
+# =====================
 st.subheader("サーブ結果入力")
 
 st.session_state.pending_result = st.radio(
-    "効果",
-    ["サービスエース", "Cパス", "Bパス", "Aパス", "サーブミス"]
+    "サーブの効果",
+    ["サービスエース", "Aパス", "Bパス", "Cパス", "サーブミス"]
 )
 
 st.session_state.pending_point = st.radio(
     "得点",
-    ["自チーム得点", "相手得点"]
+    ["自チーム得点", "相手チーム得点"],
+    horizontal=True
 )
 
-if st.button("🔍 確認"):
-    st.session_state.confirming = True
+# =====================
+# 記録ボタン（1回で確定）
+# =====================
+if st.button("記録"):
+    result = st.session_state.pending_result
+    point = st.session_state.pending_point
 
-# ==================
-# 確認 → 確定
-# ==================
-if st.session_state.confirming:
+    # 得点処理
+    if point == "自チーム得点":
+        st.session_state.team_score += 1
+        if st.session_state.need_rotation:
+            st.session_state.rotation = st.session_state.rotation % 6 + 1
+            st.session_state.need_rotation = False
+    else:
+        st.session_state.opp_score += 1
+        st.session_state.need_rotation = True
 
-    st.warning("この内容で記録しますか？")
+    # ログ保存
+    st.session_state.log.append({
+        "date": match_date,
+        "match": match_name,
+        "set": st.session_state.set_no,
+        "rally": st.session_state.rally_no,
+        "team_score": st.session_state.team_score,
+        "opp_score": st.session_state.opp_score,
+        "rotation": st.session_state.rotation,
+        "server": current_server,
+        "result": result
+    })
 
-    st.write(f"サーバー：{current_server}")
-    st.write(f"効果：{st.session_state.pending_result}")
-    st.write(f"得点：{st.session_state.pending_point}")
+    st.session_state.rally_no += 1
 
-    col1, col2 = st.columns(2)
+# =====================
+# Undo
+# =====================
+if st.button("Undo（1つ戻す）"):
+    if st.session_state.log:
+        st.session_state.log.pop()
+        st.session_state.rally_no -= 1
 
-    with col1:
-        if st.button("✅ 確定"):
-            prev_serving = st.session_state.serving_team
+# =====================
+# セット終了
+# =====================
+if (
+    st.session_state.team_score >= max_score
+    or st.session_state.opp_score >= max_score
+):
+    st.success("セット終了")
+    if st.button("次のセットへ"):
+        st.session_state.set_no += 1
+        st.session_state.team_score = 0
+        st.session_state.opp_score = 0
+        st.session_state.rotation = 1
+        st.session_state.rally_no = 1
+        st.session_state.need_rotation = False
 
-            # 得点処理
-            if st.session_state.pending_point == "自チーム得点":
-                st.session_state.team_score += 1
-                scorer = "my"
-            else:
-                st.session_state.opp_score += 1
-                scorer = "opp"
-
-            # サーブ権・ローテ処理
-            if scorer != prev_serving:
-                st.session_state.serving_team = scorer
-                if scorer == "my":
-                    st.session_state.my_rotate_idx = (st.session_state.my_rotate_idx + 1) % 6
-                else:
-                    st.session_state.opp_rotate_idx = (st.session_state.opp_rotate_idx + 1) % 6
-
-            # ログ保存
-            st.session_state.log.append({
-                "date": match_date,
-                "match": match_name,
-                "set": st.session_state.set_no,
-                "rally": st.session_state.rally_no,
-                "serving_team": prev_serving,
-                "server": current_server,
-                "result": st.session_state.pending_result,
-                "point": st.session_state.pending_point,
-                "team_score": st.session_state.team_score,
-                "opp_score": st.session_state.opp_score,
-            })
-
-            st.session_state.rally_no += 1
-            st.session_state.confirming = False
-
-    with col2:
-        if st.button("✏️ 修正する"):
-            st.session_state.confirming = False
-
-# ==================
-# 記録一覧
-# ==================
 st.divider()
-st.subheader("📋 記録一覧")
+
+# =====================
+# データ表示
+# =====================
+st.subheader("記録データ")
 
 df = pd.DataFrame(st.session_state.log)
 st.dataframe(df, use_container_width=True)
 
-# ==================
+# =====================
+# サーブ効果率
+# =====================
+if not df.empty:
+    df["ace"] = (df["result"] == "サービスエース").astype(int)
+    df["effect"] = (df["result"] == "Cパス").astype(int)
+    df["miss"] = (df["result"] == "サーブミス").astype(int)
+
+    summary = (
+        df.groupby(["server", "set"])
+        .agg(
+            打数=("result", "count"),
+            ACE=("ace", "sum"),
+            効果=("effect", "sum"),
+            失点=("miss", "sum")
+        )
+        .reset_index()
+    )
+
+    summary["サーブ効果率（%）"] = (
+        (summary["ACE"] * 100
+         + summary["効果"] * 25
+         - summary["失点"] * 25)
+        / summary["打数"]
+    ).round(1)
+
+    st.subheader("サーブ効果率")
+    st.dataframe(summary, use_container_width=True)
+
+# =====================
 # CSV出力
-# ==================
+# =====================
 if not df.empty:
     csv = df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(

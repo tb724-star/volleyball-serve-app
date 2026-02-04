@@ -28,11 +28,19 @@ if "rotation" not in st.session_state:
 if "serve_team" not in st.session_state:
     st.session_state.serve_team = "自チーム"
 
+# 確定済みサーブ順
 if "my_servers" not in st.session_state:
     st.session_state.my_servers = []
 
 if "opp_servers" not in st.session_state:
     st.session_state.opp_servers = []
+
+# 入力中サーブ順（ここが重要）
+if "tmp_my_servers" not in st.session_state:
+    st.session_state.tmp_my_servers = []
+
+if "tmp_opp_servers" not in st.session_state:
+    st.session_state.tmp_opp_servers = []
 
 # ==================
 # 関数
@@ -64,32 +72,46 @@ st.divider()
 # ==================
 # サーブ順入力
 # ==================
-st.subheader("🔁 サーブ順入力（左→右）")
+st.subheader("🔁 サーブ順入力（6人選んで確定）")
 
 colA, colB = st.columns(2)
+
 with colA:
-    my_servers = st.multiselect(
-        "自チーム サーブ順（6人）",
+    st.session_state.tmp_my_servers = st.multiselect(
+        "自チーム サーブ順（左→右）",
         options=list(range(1, 31)),
-        default=st.session_state.my_servers
+        default=st.session_state.tmp_my_servers
     )
+
 with colB:
-    opp_servers = st.multiselect(
-        "相手チーム サーブ順（6人）",
+    st.session_state.tmp_opp_servers = st.multiselect(
+        "相手チーム サーブ順（左→右）",
         options=list(range(1, 31)),
-        default=st.session_state.opp_servers
+        default=st.session_state.tmp_opp_servers
     )
 
-if len(my_servers) <= 6:
-    st.session_state.my_servers = my_servers
+colC, colD = st.columns(2)
 
-if len(opp_servers) <= 6:
-    st.session_state.opp_servers = opp_servers
+with colC:
+    if st.button("✅ 自チーム サーブ順確定"):
+        if len(st.session_state.tmp_my_servers) == 6:
+            st.session_state.my_servers = st.session_state.tmp_my_servers.copy()
+            st.success("自チームのサーブ順を確定しました")
+        else:
+            st.error("6人選択してください")
+
+with colD:
+    if st.button("✅ 相手チーム サーブ順確定"):
+        if len(st.session_state.tmp_opp_servers) == 6:
+            st.session_state.opp_servers = st.session_state.tmp_opp_servers.copy()
+            st.success("相手チームのサーブ順を確定しました")
+        else:
+            st.error("6人選択してください")
 
 st.divider()
 
 # ==================
-# 現在状況表示（←ここが超重要）
+# 現在状況表示
 # ==================
 st.subheader("📊 現在の状況")
 
@@ -103,7 +125,7 @@ with c3:
     if server_now is not None:
         st.metric("現在のサーバー", f"{st.session_state.serve_team}：#{server_now}")
     else:
-        st.warning("サーブ順を6人入力してください")
+        st.warning("サーブ順が未確定です")
 
 st.divider()
 
@@ -131,7 +153,7 @@ if st.button("▶ 記録"):
     current_server = get_current_server()
 
     if current_server is None:
-        st.warning("サーブ順が未完成です")
+        st.warning("サーブ順を先に確定してください")
     else:
         ace = 1 if result == "サービスエース" else 0
         effect = 1 if result == "Cパス" else 0
@@ -153,7 +175,6 @@ if st.button("▶ 記録"):
             "opp_score": st.session_state.opp_score
         })
 
-        # 得点・サーブ権更新
         if point == "自チーム得点":
             st.session_state.team_score += 1
             st.session_state.serve_team = "自チーム"

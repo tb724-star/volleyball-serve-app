@@ -152,8 +152,7 @@ if st.session_state.confirming and current_server is not None:
     "server": current_server,
     "result": st.session_state.pending_result,
     "point": st.session_state.pending_point,
-         }
-
+         
     # --- Undo用 ---
     "undo_team_score": st.session_state.team_score,
     "undo_opp_score": st.session_state.opp_score,

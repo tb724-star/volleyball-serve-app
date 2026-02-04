@@ -98,7 +98,7 @@ st.session_state.log.append({
     "miss": miss
 })
 
-    st.session_state.rally_no += 1
+st.session_state.rally_no += 1
 
 # ------------------
 # Undo

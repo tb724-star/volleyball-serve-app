@@ -34,6 +34,9 @@ if "my_servers" not in st.session_state:
 if "opp_servers" not in st.session_state:
     st.session_state.opp_servers = []
 
+if "need_rerun" not in st.session_state:
+    st.session_state.need_rerun = False
+
 # ------------------
 # タイトル・試合情報
 # ------------------
@@ -163,7 +166,7 @@ if st.button("記録"):
     st.session_state.rotation += 1
     st.session_state.rally_no += 1
 
-    st.rerun()
+    st.session_state.need_rerun = True
 
 # ------------------
 # Undo
@@ -218,3 +221,10 @@ if not df.empty:
         file_name="serve_log.csv",
         mime="text/csv"
     )
+
+# ------------------
+# rerun（1回だけ）
+# ------------------
+if st.session_state.need_rerun:
+    st.session_state.need_rerun = False
+    st.rerun()
